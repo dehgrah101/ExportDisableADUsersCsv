@@ -1,0 +1,25 @@
+# Set the path where you want to save the CSV file
+$csvPath = "$env:userprofile\desktop\disabled_users_groups.csv"
+
+# Get all disabled users from Active Directory
+$disabledUsers = Get-ADUser -Filter {Enabled -eq $false} -Properties DisplayName, EmailAddress, Description
+
+# Loop through each disabled user and get their group memberships
+foreach ($user in $disabledUsers) {
+    $userGroups = Get-ADPrincipalGroupMembership $user | Select-Object Name
+    $groupNames = ($userGroups | ForEach-Object { $_.Name }) -join '; '
+    
+    # Create a custom object with user information and group memberships
+    $userObject = [PSCustomObject] @{
+        Name = $user.DisplayName
+        Email = $user.EmailAddress
+        Description = $user.Description
+        Groups = $groupNames
+    }
+    
+    # Add the user object to an array
+    $userArray += $userObject
+}
+
+# Export the array of user objects to a CSV file
+$userArray | Export-Csv -Path $csvPath -NoTypeInformation
